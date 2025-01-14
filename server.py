@@ -1,6 +1,10 @@
 import socket
 import struct
 import time
+from cryptography.hazmat.primitives import hashes, hmac
+from dotenv import load_dotenv
+from os import getenv
+
 
 NTP_ADDR = 'localhost'
 NTP_PORT = 12345
@@ -27,7 +31,6 @@ def resposta_ntp(receiveTimestamp):
     print(f"Transmit Timestamp: {transmitTimestamp}")
     print(f"referenceTimestamp Timestamp: {referenceTimestamp}")
 
-
     return struct.pack(
         "!B B b b I I I Q Q Q Q",  # 48 bytes
         leapIndicator_version_mode,
@@ -43,8 +46,22 @@ def resposta_ntp(receiveTimestamp):
         transmitTimestamp
     )
 
+from cryptography.hazmat.primitives import hashes, hmac
+
+def criptografar_resposta(key, resposta):
+    try:
+        h = hmac.HMAC(key, hashes.SHA256())
+        h.update(resposta)
+        hmac_digest = h.finalize()
+        
+        return resposta + hmac_digest
+    except Exception as e:
+        raise ValueError(f"Erro ao criptografar a mensagem: {e}")
+
+
 def main():
     try:
+        load_dotenv()
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server.bind((NTP_ADDR, NTP_PORT))
         print(f'Servidor NTP iniciado na porta {NTP_PORT}')
@@ -60,9 +77,11 @@ def main():
             receiveTimestamp = (receiveTimestampHigh << 32) | receiveTimestampLow
 
             resposta = resposta_ntp(receiveTimestamp)
-            server.sendto(resposta, address)
-            print(f"Resposta enviada para {address}")
-
+            key = getenv("KEY").encode()
+            if key != None:
+                server.sendto(criptografar_resposta(key, resposta), address)
+            else:
+                print("Falha ao carregar a chave 👍🤣")
     except Exception as e:
         print(f"Erro: {e}")
 

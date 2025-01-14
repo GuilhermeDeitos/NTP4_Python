@@ -1,5 +1,8 @@
 import socket
 import struct, time
+from cryptography.hazmat.primitives import hashes, hmac
+from dotenv import load_dotenv
+from os import getenv
 
 NTP_SERVER = "localhost"  # Endereço do servidor NTP local
 NTP_PORT = 12345
@@ -60,22 +63,44 @@ def calc_offset(t1, t2, t3, t4) -> tuple:
     delay = (t4 - t1) - (t3 - t2)
     return offset, delay
 
+def validar_hmac(key, mensagem, hmac_recebido):
+    try:
+        h = hmac.HMAC(key, hashes.SHA256())
+        h.update(mensagem)
+        h.verify(hmac_recebido)  # Lança uma exceção se o HMAC não for válido
+        print("HMAC verificado com sucesso.")
+        return True
+    except Exception as e:
+        print("Cliente não autorizado para sincronização:", e)
+        return False
+        
+    
 def main():
     try:
+        load_dotenv()
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(5)
         
         t1 = time.time() + NTP_EPOCH
-        
+        key = getenv("KEY").encode()
         # Criar e enviar o pacote NTP
         data = criar_req_ntp()
         client.sendto(data, (NTP_SERVER, NTP_PORT))
         
         # Receber o pacote NTP de resposta
         data, address = client.recvfrom(1024)
-        t4 = time.time() + NTP_EPOCH
+        if(len(data) != 80):
+            raise ValueError(f"Pacote NTP inválido. O pacote deve ter 80 bytes mas tem {len(data)} bytes.")
 
-        t2, t3 = extract_timestamps_from_package(data)
+        pacote_ntp = data[:48]
+        hmac_recebido = data[48:]
+        
+        key = getenv("KEY").encode()
+        if(validar_hmac(key, pacote_ntp, hmac_recebido) == False):
+            return
+
+        t4 = time.time() + NTP_EPOCH
+        t2, t3 = extract_timestamps_from_package(pacote_ntp)
 
         print(f"t1: {t1}")
         print(f"t2: {t2}")
