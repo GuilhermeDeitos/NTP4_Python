@@ -4,8 +4,16 @@ from cryptography.hazmat.primitives import hashes, hmac
 from dotenv import load_dotenv
 from os import getenv
 
-NTP_SERVER = "localhost"  # Endereço do servidor NTP local
-NTP_PORT = 12345
+print("Caso não deseje trocar nenhum dos valores padrões, apenas aperte Enter.")
+NTP_SERVER = str(input("Deseja mudar o servidor? [localhost] "))  # Endereço do servidor NTP local
+if NTP_SERVER == "": 
+    NTP_SERVER = "localhost"
+
+NTP_PORT = str(input("Deseja a mudar porta? [12345] "))
+if NTP_PORT == "":
+    NTP_PORT = 12345
+else:
+    NTP_PORT = int(NTP_PORT)
 NTP_EPOCH = 2208988800  # 1970-1900 em segundos (tempo unix)
 
 def criar_req_ntp():
@@ -89,15 +97,16 @@ def main():
         
         # Receber o pacote NTP de resposta
         data, address = client.recvfrom(1024)
-        if(len(data) != 80):
+        if(len(data) != 80 and NTP_SERVER == "localhost"):
             raise ValueError(f"Pacote NTP inválido. O pacote deve ter 80 bytes mas tem {len(data)} bytes.")
 
         pacote_ntp = data[:48]
         hmac_recebido = data[48:]
         
         key = getenv("KEY").encode()
-        if(validar_hmac(key, pacote_ntp, hmac_recebido) == False):
-            return
+        if(NTP_SERVER == "localhost"):
+            if validar_hmac(key, pacote_ntp, hmac_recebido) == False:
+                return
 
         t4 = time.time() + NTP_EPOCH
         t2, t3 = extract_timestamps_from_package(pacote_ntp)

@@ -58,7 +58,6 @@ def criptografar_resposta(key, resposta):
     except Exception as e:
         raise ValueError(f"Erro ao criptografar a mensagem: {e}")
 
-
 def main():
     try:
         load_dotenv()
