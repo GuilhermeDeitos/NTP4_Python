@@ -57,9 +57,6 @@ def criar_req_ntp():
     )
 
 def extract_timestamps_from_package(data):
-    """
-    Extrai os timestamps de recepção (t2) e transmissão (t3) do pacote NTP recebido.
-    """
     descompactado = struct.unpack("!B B b b I I I Q Q Q Q", data)
 
     t2 = (descompactado[8] >> 32) + (descompactado[8] & 0xFFFFFFFF) / (2**32)  # Recebido
@@ -80,8 +77,7 @@ def validar_hmac(key, mensagem, hmac_recebido):
         return True
     except Exception as e:
         print("Cliente não autorizado para sincronização:", e)
-        return False
-        
+        return False       
     
 def main():
     try:
@@ -97,16 +93,10 @@ def main():
         
         # Receber o pacote NTP de resposta
         data, address = client.recvfrom(1024)
-        if(len(data) != 80 and NTP_SERVER == "localhost"):
-            raise ValueError(f"Pacote NTP inválido. O pacote deve ter 80 bytes mas tem {len(data)} bytes.")
 
         pacote_ntp = data[:48]
-        hmac_recebido = data[48:]
         
         key = getenv("KEY").encode()
-        if(NTP_SERVER == "localhost"):
-            if validar_hmac(key, pacote_ntp, hmac_recebido) == False:
-                return
 
         t4 = time.time() + NTP_EPOCH
         t2, t3 = extract_timestamps_from_package(pacote_ntp)
