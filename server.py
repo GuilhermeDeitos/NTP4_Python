@@ -4,7 +4,7 @@ import time
 from cryptography.hazmat.primitives import hashes, hmac
 
 NTP_ADDR = 'localhost'
-NTP_PORT = 12345
+NTP_PORT = 123
 NTP_EPOCH = 2208988800  # 1970-1900 em segundos (tempo unix)
 
 def carregar_chave_ntp():
