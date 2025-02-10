@@ -1,23 +1,12 @@
 import socket
 import struct
 import time
+from common import carregar_chave_ntp
 from cryptography.hazmat.primitives import hashes, hmac
 
 NTP_ADDR = 'localhost'
 NTP_PORT = 123
 NTP_EPOCH = 2208988800  # 1970-1900 em segundos (tempo unix)
-
-def carregar_chave_ntp():
-    try:
-        with open("/etc/ntp.keys", "r") as f:
-            for linha in f:
-                partes = linha.strip().split()
-                if len(partes) == 3 and partes[1] == "SHA256":
-                    return int(partes[0]), partes[2].encode()
-        return None, None
-    except FileNotFoundError:
-        print("Arquivo ntp.keys não encontrado.")
-        return None, None
 
 def resposta_ntp(receiveTimestamp):
     leapIndicator = 0
@@ -61,12 +50,11 @@ def criptografar_resposta(resposta):
 
         if chave_ntp:
             resposta_com_id = struct.pack("!I", chave_id) + resposta
-
             h = hmac.HMAC(chave_ntp, hashes.SHA256())
-            h.update(resposta_com_id)
+            h.update(resposta)
             hmac_digest = h.finalize()
 
-            return resposta_com_id + hmac_digest
+            return resposta + hmac_digest
         else:
             print("Nenhuma chave NTP encontrada. Resposta sem autenticação.")
             return resposta
@@ -91,6 +79,7 @@ def main():
             receiveTimestamp = (receiveTimestampHigh << 32) | receiveTimestampLow
 
             resposta = resposta_ntp(receiveTimestamp)
+            print(criptografar_resposta(resposta))
             server.sendto(criptografar_resposta(resposta), address)
             print(f"Resposta enviada para {address}")
     except Exception as e:
