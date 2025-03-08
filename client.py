@@ -5,10 +5,12 @@ from common import carregar_chave_ntp
 
 print("Caso não deseje trocar nenhum dos valores padrões, apenas aperte Enter.")
 
+print("Atenção: se você mudar o servidor, a comunicação será sem autenticação.")
 NTP_SERVER = str(input("Deseja mudar o servidor? [localhost] ")) or "localhost"
 NTP_PORT = input("Deseja a mudar porta? [123] ") or 123
 NTP_EPOCH = 2208988800  # 1970-1900 em segundos (tempo unix)
 HMAC_SIZE = 32
+isAuthenticating = (NTP_SERVER == "localhost")
 
 def criar_req_ntp():
     leapIndicator = 0
@@ -78,11 +80,12 @@ def validar_hmac(chave_ntp, data):
     
 def main():
     try:
-        chave_id, chave_ntp = carregar_chave_ntp()
+        if isAuthenticating:
+            chave_id, chave_ntp = carregar_chave_ntp()
 
-        if chave_ntp is None:
-            print("Nenhuma chave NTP encontrada. A resposta não será autenticada.")
-            return
+            if chave_ntp is None:
+                print("Nenhuma chave NTP encontrada. A resposta não será autenticada.")
+                return
         
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(5)
@@ -94,10 +97,11 @@ def main():
         
         data, address = client.recvfrom(1024)
         pacote_ntp = data[:48]
-        hmac_validado = validar_hmac(chave_ntp, data)
+        if isAuthenticating:
+            hmac_validado = validar_hmac(chave_ntp, data)
 
-        if not hmac_validado:
-            raise ValueError("HMAC inválido! O servidor pode não ser confiável.")
+            if not hmac_validado and isAuthenticating:
+                raise ValueError("HMAC inválido! O servidor pode não ser confiável.")
  
         t4 = time.time() + NTP_EPOCH
         t2, t3 = extract_timestamps_from_package(pacote_ntp)
