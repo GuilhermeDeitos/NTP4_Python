@@ -6,7 +6,7 @@ from common import carregar_chave_ntp
 print("Caso não deseje trocar nenhum dos valores padrões, apenas aperte Enter.")
 
 print("Atenção: se você mudar o servidor, a comunicação será sem autenticação.")
-NTP_SERVER = str(input("Deseja mudar o servidor? [localhost] ")) or "localhost"
+NTP_SERVER = str(input("Deseja mudar o servidor? [a.ntp.br] ")) or "a.ntp.br"
 NTP_PORT = input("Deseja a mudar porta? [123] ") or 123
 NTP_EPOCH = 2208988800  # 1970-1900 em segundos (tempo unix)
 HMAC_SIZE = 32
@@ -113,6 +113,7 @@ def main():
 
         offset, delay = calc_offset(t1, t2, t3, t4)
         server_time = t4 + offset - NTP_EPOCH  # Ajustar para a época Unix
+        print(f"Servidor {NTP_SERVER} respondeu com sucesso.")
         print(f"server_time (segundos desde a época Unix): {server_time}")
 
         if server_time < 0:
